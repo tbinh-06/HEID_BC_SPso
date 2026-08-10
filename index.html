@@ -202,9 +202,9 @@ table.dvt td:first-child,table.dvt th:first-child{border-left:none}
           <div style="position:relative;height:230px"><canvas id="dt_c_time"></canvas></div>
         </div>
         <div class="card">
-          <div class="hd"><i class="ti ti-arrow-guide"></i> Theo kênh bán <span class="pill">Bán lẻ vs Bán buôn</span></div>
-          <div style="position:relative;height:230px"><canvas id="dt_c_chan"></canvas></div>
-          <div class="s2" style="margin-top:6px">Bán lẻ: VietQR (đã có). Bán buôn: hợp đồng — <b>doanh thu lấy Base (tương lai)</b>.</div>
+          <div class="hd"><i class="ti ti-clock-hour-4"></i> Tổng thời lượng sử dụng theo sản phẩm <span class="pill">giờ</span></div>
+          <div class="s2" style="margin-bottom:6px">Tổng số giờ user đã dùng từng sản phẩm trong kỳ (số phiên × thời lượng mỗi phiên). Đo tổng mức độ sử dụng.</div>
+          <div style="position:relative;height:230px"><canvas id="dt_c_dur"></canvas></div>
         </div>
       </div>
 
@@ -238,7 +238,7 @@ table.dvt td:first-child,table.dvt th:first-child{border-left:none}
       <div class="card">
         <div class="hd"><i class="ti ti-apps"></i> Phân tích theo sản phẩm <span class="pill">10 sản phẩm</span></div>
         <div style="overflow-x:auto;max-height:360px;overflow-y:auto">
-          <table class="rk dvt" style="min-width:720px"><thead><tr><th>Sản phẩm</th><th>Nền tảng</th><th>Người dùng</th><th>Hoạt động</th><th>% hoạt động</th><th>Người mua</th><th>Doanh thu (tr đ)</th></tr></thead><tbody id="dt_prod_tb"></tbody></table>
+          <table class="rk dvt" style="min-width:800px"><thead><tr><th>Sản phẩm</th><th>Nền tảng</th><th>Người dùng</th><th>Hoạt động</th><th>% hoạt động</th><th>Người mua</th><th>TL BQ/phiên</th><th>Doanh thu (tr đ)</th></tr></thead><tbody id="dt_prod_tb"></tbody></table>
         </div>
       </div>
     </section>
@@ -266,17 +266,18 @@ function dc(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
 
 /* ===== DATA ===== */
 const PRODUCTS=[
-  {n:'GlobalSpeak',plat:'gs',users:68450,active:0.54,buyers:24300,rev:12300},
-  {n:'HL · Học liệu điện tử (SGK số)',plat:'hl',users:62400,active:0.72,buyers:21800,rev:7200},
-  {n:'HL · Ngân hàng câu hỏi/đề',      plat:'hl',users:48200,active:0.68,buyers:16400,rev:5400},
-  {n:'HL · Luyện thi trực tuyến',       plat:'hl',users:38600,active:0.71,buyers:14200,rev:4800},
-  {n:'HL · Bài giảng video',            plat:'hl',users:32400,active:0.64,buyers:9800, rev:3200},
-  {n:'HL · Kiểm tra đánh giá',          plat:'hl',users:24800,active:0.66,buyers:6200, rev:2400},
-  {n:'HL · Sổ liên lạc điện tử',        plat:'hl',users:18600,active:0.58,buyers:4100, rev:1400},
-  {n:'HL · Thư viện số',                plat:'hl',users:12400,active:0.52,buyers:2800, rev:980},
-  {n:'HL · Gói giáo viên',              plat:'hl',users:6800, active:0.74,buyers:2100, rev:2100},
-  {n:'HL · Dịch vụ & khác',             plat:'hl',users:2480, active:0.48,buyers:800,  rev:520},
+  {n:'GlobalSpeak',plat:'gs',users:68450,active:0.54,buyers:24300,rev:12300,dur:16},
+  {n:'HL · Học liệu điện tử (SGK số)',plat:'hl',users:62400,active:0.72,buyers:21800,rev:7200,dur:14},
+  {n:'HL · Ngân hàng câu hỏi/đề',      plat:'hl',users:48200,active:0.68,buyers:16400,rev:5400,dur:18},
+  {n:'HL · Luyện thi trực tuyến',       plat:'hl',users:38600,active:0.71,buyers:14200,rev:4800,dur:23},
+  {n:'HL · Bài giảng video',            plat:'hl',users:32400,active:0.64,buyers:9800, rev:3200,dur:20},
+  {n:'HL · Kiểm tra đánh giá',          plat:'hl',users:24800,active:0.66,buyers:6200, rev:2400,dur:25},
+  {n:'HL · Sổ liên lạc điện tử',        plat:'hl',users:18600,active:0.58,buyers:4100, rev:1400,dur:4},
+  {n:'HL · Thư viện số',                plat:'hl',users:12400,active:0.52,buyers:2800, rev:980, dur:12},
+  {n:'HL · Gói giáo viên',              plat:'hl',users:6800, active:0.74,buyers:2100, rev:2100,dur:15},
+  {n:'HL · Dịch vụ & khác',             plat:'hl',users:2480, active:0.48,buyers:800,  rev:520, dur:8},
 ];
+const SESS_PERIOD=30;  // số phiên BQ / người hoạt động trong kỳ (để ước tính tổng thời lượng)
 const U_NEW_ALL=[38200,42400,48600,44800,46200,52100,48900];
 const BUYER_M_ALL=[11800,13200,15400,14100,14600,16200,13000];  // người mua theo tháng
 const REV_HL=[7100,8400,9600,8900,8500,9800,8200];
@@ -309,41 +310,46 @@ const TOP_NGUOI=[
   ['Đặng Minh Tú','Hà Nội',271],['Lý Thị Hồng','Cần Thơ',264],['Trịnh Văn Hải','Đà Nẵng',252],
 ];
 const BOT_NGUOI=[
-  ['Đỗ Văn Sơn','Thanh Hóa',3],['Ngô Thị Yến','Yên Bái',2],['Bùi Văn Hùng','Hà Giang',2],['Đinh Thị Mai','Lai Châu',1],
+  ['Đỗ Văn Sơn','Thanh Hóa',6],['Ngô Thị Yến','Yên Bái',5],['Bùi Văn Hùng','Hà Giang',5],['Đinh Thị Mai','Lai Châu',4],
+  ['Vương Văn Tú','Cao Bằng',4],['Hà Thị Loan','Điện Biên',3],['Phan Văn Bình','Sơn La',3],['Lê Thị Nga','Bắc Kạn',2],
+  ['Trần Văn Kiên','Lào Cai',2],['Nguyễn Thị Hoa','Kon Tum',1],
 ];
 const BOT_TRUONG=[
   ['TH Xã Đông Sơn','Thanh Hóa',640,54],['THCS Yên Bình','Yên Bái',520,32],
   ['TH Cẩm Thủy','Thanh Hóa',410,22],['THCS Mường Lát','Thanh Hóa',380,18],
+  ['TH Bản Phố','Lào Cai',340,15],['THCS Sín Chải','Điện Biên',298,12],
+  ['TH Nà Bủng','Sơn La',264,10],['THCS Đồng Văn','Hà Giang',210,8],
+  ['TH Lũng Cú','Hà Giang',186,6],['THCS Bảo Lạc','Cao Bằng',150,5],
 ];
 const CHANNELS=[['Bán lẻ (VietQR)',88600,9800],['Bán buôn (hợp đồng)',66400,17000]];
 
-// pool tên để sinh top cho tỉnh bất kỳ
+// pool tên để sinh top cho tỉnh bất kỳ (≥10)
 const SCHOOL_POOL=['THPT Chuyên','THPT Nguyễn Huệ','THCS Lê Quý Đôn','TH&THCS Trần Hưng Đạo','Tiểu học Kim Đồng','THPT Lê Lợi','THCS Nguyễn Du','Tiểu học Võ Thị Sáu','THPT Phan Bội Châu','THCS Chu Văn An','Tiểu học Đinh Tiên Hoàng','THPT Ngô Quyền'];
 const NAME_POOL=['Nguyễn Văn An','Trần Thị Bình','Lê Hoàng Nam','Phạm Thu Hà','Vũ Minh Đức','Hoàng Lan Anh','Đỗ Quốc Việt','Ngô Thị Thu','Bùi Văn Khoa','Đặng Minh Tú','Lý Thị Hồng','Trịnh Văn Hải'];
-const BOT_SCHOOL_POOL=['TH Vùng cao','THCS Xã Đông','TH Bản Mới','THCS Biên Giới'];
-const BOT_NAME_POOL=['Đỗ Văn Sơn','Ngô Thị Yến','Bùi Văn Hùng','Đinh Thị Mai'];
+const BOT_SCHOOL_POOL=['TH Vùng cao','THCS Xã Đông','TH Bản Mới','THCS Biên Giới','TH Thôn Thượng','THCS Nà Pó','TH Khe Sanh','THCS Pù Luông','TH Suối Giàng','THCS Tà Xùa'];
+const BOT_NAME_POOL=['Đỗ Văn Sơn','Ngô Thị Yến','Bùi Văn Hùng','Đinh Thị Mai','Vương Văn Tú','Hà Thị Loan','Phan Văn Bình','Lê Thị Nga','Trần Văn Kiên','Nguyễn Thị Hoa'];
 function provUsers(name){const p=PROV.find(x=>x[0]===name);return p?p[1]:20000;}
 // top theo tỉnh (mọi tỉnh đều có dữ liệu)
 function topFor(kind){
   const ds=dateScale();
-  if(F.geo==='all'){const src=kind==='truong'?TOP_TRUONG:TOP_NGUOI;return src.map(r=>[r[0],r[1],Math.round(r[2]*ds)]);}
+  if(F.geo==='all'){const src=kind==='truong'?TOP_TRUONG:TOP_NGUOI;return src.slice(0,10).map(r=>[r[0],r[1],Math.round(r[2]*ds)]);}
   const base=provUsers(F.geo);
   if(kind==='truong'){
     const peak=base*0.035;
-    return SCHOOL_POOL.map((nm,i)=>[nm+' '+F.geo,F.geo,Math.max(Math.round(peak*(1-i*0.06)*ds),200)]);
+    return SCHOOL_POOL.slice(0,10).map((nm,i)=>[nm+' '+F.geo,F.geo,Math.max(Math.round(peak*(1-i*0.06)*ds),200)]);
   }else{
     const peak=200+base/400;
-    return NAME_POOL.map((nm,i)=>[nm,F.geo,Math.max(Math.round(peak*(1-i*0.055)*ds),40)]);
+    return NAME_POOL.slice(0,10).map((nm,i)=>[nm,F.geo,Math.max(Math.round(peak*(1-i*0.055)*ds),40)]);
   }
 }
 function botFor(kind){
   const ds=dateScale();
-  if(F.geo==='all')return kind==='truong'?BOT_TRUONG.map(r=>[r[0],r[1],Math.round(r[2]*ds)]):BOT_NGUOI.map(r=>[r[0],r[1],Math.round(r[2]*ds)]);
+  if(F.geo==='all')return (kind==='truong'?BOT_TRUONG:BOT_NGUOI).slice(0,10).map(r=>[r[0],r[1],Math.round(r[2]*ds)]);
   const base=provUsers(F.geo);
   if(kind==='truong'){
-    return BOT_SCHOOL_POOL.map((nm,i)=>[nm+' '+F.geo,F.geo,Math.max(Math.round(base*0.006*(1-i*0.15)*ds),60)]);
+    return BOT_SCHOOL_POOL.slice(0,10).map((nm,i)=>[nm+' '+F.geo,F.geo,Math.max(Math.round(base*0.007*Math.pow(0.86,i)*ds),40)]);
   }else{
-    return BOT_NAME_POOL.map((nm,i)=>[nm,F.geo,Math.max(Math.round((4-i)*ds),1)]);
+    return BOT_NAME_POOL.slice(0,10).map((nm,i)=>[nm,F.geo,Math.max(Math.round((10-i)*0.6*ds),1)]);
   }
 }
 // cơ cấu người dùng & người mua theo kênh (tỷ lệ trên tổng)
@@ -412,12 +418,17 @@ function buildOverview(){
   const buyers=S(sumProd('buyers'));
   const buyersLe=Math.round(buyers*BUYER_LE_RATIO);   // người mua lẻ (mẫu số ARPU)
   const rev=S(sumProd('rev'));                          // doanh thu bán lẻ
+  // thời lượng sử dụng
+  const actUsers=selProd().reduce((a,p)=>a+p.active*p.users,0);
+  const durAvg=actUsers>0?selProd().reduce((a,p)=>a+p.active*p.users*p.dur,0)/actUsers:0;  // BQ/phiên (phút)
+  const totalHours=S(selProd().reduce((a,p)=>a+p.active*p.users*SESS_PERIOD*p.dur/60,0));   // tổng giờ
   el('ov_kpi').innerHTML=
     '<div class="kpi"><div class="chg u">↑ 18,4%</div><div class="ttl">Tổng người dùng</div><div class="big">'+nf(users)+'</div><div class="expl">Tài khoản không trùng có phiên truy cập · gồm cả bán lẻ &amp; bán buôn</div></div>'
     +'<div class="kpi"><div class="ttl">Người dùng hoạt động</div><div class="big" style="color:var(--suc)">'+nf(users*act)+'</div><div class="expl">Có đăng nhập trong 30 ngày · tỷ lệ '+pp(act*100)+'%</div></div>'
     +'<div class="kpi"><div class="ttl">Người mua lẻ</div><div class="big" style="color:#8577C4">'+nf(buyersLe)+'</div><div class="expl">Cá nhân mua qua VietQR · chuyển đổi '+pp(buyersLe/users*100)+'%</div></div>'
     +'<div class="kpi"><div class="chg u">↑ 16,2%</div><div class="ttl">Doanh thu bán lẻ<span class="tt"><i class="ti ti-info-circle info-i"></i><span class="ttbox"><b>Doanh thu bán lẻ trong kỳ:</b> tổng giá trị đơn bán lẻ (qua VietQR) đã hoàn thành, cộng dồn trong khoảng ngày đã chọn. Chưa gồm bán buôn (hợp đồng — tương lai).</span></span></div><div class="big">'+nf(rev)+'</div><div class="expl">triệu đồng · lũy kế trong kỳ (VietQR)</div></div>'
-    +'<div class="kpi"><div class="ttl">DT BQ / người mua lẻ<span class="tt"><i class="ti ti-info-circle info-i"></i><span class="ttbox"><b>ARPU bán lẻ:</b> = Doanh thu bán lẻ ÷ <b>Người mua lẻ</b> (không chia tổng người mua vì tổng user gồm cả bán buôn). Cho biết mỗi khách lẻ đóng góp trung bình bao nhiêu.</span></span></div><div class="big">'+pp(rev*1000/buyersLe)+'K</div><div class="expl">= Doanh thu bán lẻ ÷ Người mua lẻ (đồng/người)</div></div>';
+    +'<div class="kpi"><div class="ttl">DT BQ / người mua lẻ<span class="tt"><i class="ti ti-info-circle info-i"></i><span class="ttbox"><b>ARPU bán lẻ:</b> = Doanh thu bán lẻ ÷ <b>Người mua lẻ</b> (không chia tổng người mua vì tổng user gồm cả bán buôn). Cho biết mỗi khách lẻ đóng góp trung bình bao nhiêu.</span></span></div><div class="big">'+pp(rev*1000/buyersLe)+'K</div><div class="expl">= Doanh thu bán lẻ ÷ Người mua lẻ (đồng/người)</div></div>'
+    +'<div class="kpi"><div class="ttl">Tổng thời lượng sử dụng<span class="tt"><i class="ti ti-info-circle info-i"></i><span class="ttbox"><b>Tổng số giờ user đã sử dụng sản phẩm trong kỳ:</b> = Σ (số phiên × thời lượng mỗi phiên) của toàn bộ user. Đo tổng mức độ sử dụng thực tế, không phải bình quân.</span></span></div><div class="big" style="color:var(--suc)">'+nf(totalHours)+'</div><div class="expl">giờ · trong kỳ (số phiên × thời lượng/phiên)</div></div>';
 
   dc('ov_c1');
   const uNew=U_NEW_ALL.map(v=>Math.round(v*(plat==='gs'?0.28:plat==='hl'?0.72:1))).map(S);
@@ -494,16 +505,16 @@ function buildDetail(){
     options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.dataset.label+': '+nf(c.parsed.y)+(c.datasetIndex===1?' tr đ':'')}}},
       scales:{x:{grid:{display:false}},y:{grid:{color:grid},ticks:{callback:nf}},y1:{position:'right',grid:{display:false},ticks:{callback:nf,color:NV}}}}});
 
-  // kênh bán
-  dc('dt_c_chan');
-  const chSc=dateScale()*SC.cust[F.cust]*geoScale();
-  let chData=CHANNELS.map(c=>[c[0],Math.round(c[1]*chSc),Math.round(c[2]*chSc)]);
-  if(F.chan==='le')chData=[chData[0]]; else if(F.chan==='buon')chData=[chData[1]];
-  charts.dt_c_chan=new Chart(el('dt_c_chan'),{data:{labels:chData.map(c=>c[0]),datasets:[
-    {type:'bar',label:'Người dùng',data:chData.map(c=>c[1]),backgroundColor:BL,borderRadius:5,yAxisID:'y',order:2},
-    {type:'line',label:'Doanh thu (tr đ)',data:chData.map(c=>c[2]),borderColor:GN,backgroundColor:GN,borderWidth:2.5,tension:.2,pointRadius:5,pointBackgroundColor:GN,yAxisID:'y1',order:1}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'top',labels:{boxWidth:8,boxHeight:8,font:{size:10}}},tooltip:{callbacks:{label:c=>c.dataset.label+': '+nf(c.parsed.y)}}},
-      scales:{x:{grid:{display:false}},y:{grid:{color:grid},ticks:{callback:nf}},y1:{position:'right',grid:{display:false},ticks:{callback:nf,color:GN}}}}});
+  // Tổng thời lượng sử dụng theo sản phẩm (giờ)
+  dc('dt_c_dur');
+  const durData=selProd().map(p=>{
+    const hours=S(Math.round(p.active*p.users*SESS_PERIOD*p.dur/60));
+    return [p.n.replace('HL · ',''),hours,p.dur];
+  }).sort((a,b)=>b[1]-a[1]);
+  charts.dt_c_dur=new Chart(el('dt_c_dur'),{type:'bar',data:{labels:durData.map(x=>x[0]),datasets:[{data:durData.map(x=>x[1]),
+    backgroundColor:durData.map(x=>x[2]>=15?GN:x[2]>=10?OR:RD),borderRadius:4}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>nf(c.parsed.x)+' giờ ('+durData[c.dataIndex][2]+'\'/phiên)'}}},
+      scales:{x:{grid:{color:grid},ticks:{callback:nf}},y:{grid:{display:false},ticks:{font:{size:9.5}}}}}});
 
   // tỉnh/thành (lọc theo tỉnh nếu chọn) + dải màu nhiệt trong ô
   const sc=scNoGeo();
@@ -542,10 +553,14 @@ function buildDetail(){
     return '<tr><td>'+p.n+'</td><td>'+(p.plat==='gs'?'GlobalSpeak':'Hoclieu.vn')+'</td>'
       +'<td class="mono">'+nf(u)+'</td><td class="mono">'+nf(actN)+'</td>'
       +'<td><span class="bdg '+(p.active>=0.65?'bG':p.active>=0.55?'bM':'bD')+'">'+pp(p.active*100)+'%</span></td>'
-      +'<td class="mono">'+nf(b)+'</td><td class="mono">'+nf(rv)+'</td></tr>';}).join('')
+      +'<td class="mono">'+nf(b)+'</td>'
+      +'<td><span class="bdg '+(p.dur>=15?'bG':p.dur>=10?'bM':'bD')+'">'+p.dur+'\' </span></td>'
+      +'<td class="mono">'+nf(rv)+'</td></tr>';}).join('')
     +'<tr class="tot"><td>TỔNG '+selProd().length+' SP</td><td>—</td>'
     +'<td class="mono">'+nf(S(sumProd('users')))+'</td><td class="mono">'+nf(S(selProd().reduce((a,p)=>a+p.active*p.users,0)))+'</td>'
-    +'<td>—</td><td class="mono">'+nf(S(sumProd('buyers')))+'</td><td class="mono">'+nf(S(sumProd('rev')))+'</td></tr>';
+    +'<td>—</td><td class="mono">'+nf(S(sumProd('buyers')))+'</td>'
+    +'<td class="mono">'+pp(selProd().reduce((a,p)=>a+p.active*p.users*p.dur,0)/(selProd().reduce((a,p)=>a+p.active*p.users,0)||1))+'\'</td>'
+    +'<td class="mono">'+nf(S(sumProd('rev')))+'</td></tr>';
 }
 
 function drawTop(){
